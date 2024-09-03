@@ -1,6 +1,11 @@
+import sys
+import subprocess
 from scraper import run_scraper
 from ai_integration import create_assistant, create_thread, chat_with_assistant
 from scheduler import start_scheduler
+
+def install_requirements():
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
 websites = [
     {
@@ -15,6 +20,8 @@ websites = [
 ]
 
 def main():
+    install_requirements()
+
     # Run initial scraping
     all_data, filename = run_scraper(websites)
     print(f"Data saved to {filename}")
