@@ -1,5 +1,14 @@
 import streamlit as st
 import pandas as pd
+import sys
+import subprocess
+
+def install_requirements():
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+
+# Call this function at the beginning of your script
+install_requirements()
+
 from scraper import run_scraper
 from ai_integration import create_assistant, create_thread, chat_with_assistant
 
@@ -8,6 +17,8 @@ if 'assistant' not in st.session_state:
     st.session_state.assistant = create_assistant()
 if 'thread' not in st.session_state:
     st.session_state.thread = create_thread()
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
 
 st.title("Web Scraper with AI Analysis")
 
@@ -40,6 +51,9 @@ if st.button("Run Scraper"):
         # Display scraped data
         df = pd.DataFrame(all_data)
         st.dataframe(df)
+        
+        # Store scraped data in session state
+        st.session_state.scraped_data = all_data
     else:
         st.warning("Please configure at least one website to scrape.")
 
@@ -47,9 +61,18 @@ if st.button("Run Scraper"):
 st.header("Chat with AI about Scraped Data")
 user_input = st.text_input("Ask a question about the scraped data:")
 if st.button("Send"):
-    with st.spinner("AI is thinking..."):
-        response = chat_with_assistant(st.session_state.assistant.id, st.session_state.thread.id, user_input)
-    st.text_area("AI Response:", value=response, height=200, max_chars=None, key=None)
+    if 'scraped_data' in st.session_state:
+        with st.spinner("AI is thinking..."):
+            response = chat_with_assistant(st.session_state.assistant.id, st.session_state.thread.id, user_input)
+        st.session_state.chat_history.append(("You", user_input))
+        st.session_state.chat_history.append(("AI", response))
+    else:
+        st.warning("Please run the scraper first to gather data for the AI to analyze.")
+
+# Display chat history
+st.subheader("Chat History")
+for role, message in st.session_state.chat_history:
+    st.text(f"{role}: {message}")
 
 # Run the Streamlit app
 if __name__ == "__main__":
