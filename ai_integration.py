@@ -5,9 +5,9 @@ client = OpenAI(api_key=os.environ.get("sk-proj-CFkiWNW9r4fkRA0pVfnvVedn5DCWyU8T
 
 def create_assistant():
     assistant = client.beta.assistants.create(
-        name="Web Scraping Analyst",
-        instructions="You are an AI assistant specializing in analyzing web scraping reports. Your role is to provide insights and answer questions about the scraped data.",
-        model="gpt-4-turbo-preview"
+        name="Procurement Assistant GPT (general)",
+        instructions="",
+        model="gpt-4"
     )
     return assistant
 
