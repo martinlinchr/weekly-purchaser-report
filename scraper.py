@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
+import io
 
 def scrape_website(url):
     response = requests.get(url)
@@ -37,20 +38,26 @@ def run_scraper():
     all_data = {}
     for key, url in urls.items():
         df = scrape_website(url)
-        if df is not None:
+        if df is not None and not df.empty:
             all_data[key] = df
         else:
             print(f"Failed to scrape data for {key}")
     
+    if not all_data:
+        print("No data was successfully scraped.")
+        return None, None
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"scraped_data_{timestamp}.xlsx"
     
-    with pd.ExcelWriter(filename) as writer:
+    # Save to BytesIO object instead of a file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for key, df in all_data.items():
             df.to_excel(writer, sheet_name=key, index=False)
     
-    print(f"Data saved to {filename}")
-    return all_data, filename
+    print(f"Data prepared for {filename}")
+    return all_data, output
 
 if __name__ == "__main__":
     run_scraper()
