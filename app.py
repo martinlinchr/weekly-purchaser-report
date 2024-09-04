@@ -34,7 +34,7 @@ if st.button("Run Scraper"):
             st.subheader(key)
             st.dataframe(df)
     else:
-        st.error("Failed to scrape any data. Please try again later.")
+        st.error("Failed to scrape any data. Please check the error messages above and try again later.")
 
 # AI Chat Interface
 st.header("Chat with AI about Scraped Data")
