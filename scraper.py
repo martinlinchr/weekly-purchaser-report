@@ -5,65 +5,65 @@ import io
 import streamlit as st
 import plotly.express as px
 
-def scrape_imf(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    script_tag = soup.find('script', {'id': 'mapJsonPayload'})
-    if script_tag:
-        data = eval(script_tag.string)
-        df = pd.DataFrame(data['values']).T
-        df.columns = ['Country'] + list(data['periods'])
-        return df
-    return None
+def scrape_global_economy(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        st.error(f"Failed to fetch {url}: {str(e)}")
+        return None
 
-def scrape_trading_economics(url):
-    response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    table = soup.find('table', {'class': 'table-hover'})
-    if table:
-        df = pd.read_html(str(table))[0]
-        return df
-    return None
+    
+    # Find the table with id 'tableHTML'
+    table = soup.find('table', {'id': 'tableHTML'})
+    
+    if not table:
+        st.warning(f"No table with id 'tableHTML' found on {url}")
+        return None
 
-def scrape_custom_url(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    tables = pd.read_html(response.text)
-    if tables:
-        return tables[0]  # Return the first table found
-    return None
+    # Extract table headers and rows
+    headers = [th.text.strip() for th in table.find_all('th')]
+    rows = []
+    for tr in table.find_all('tr')[1:]:  # Skip the header row
+        row = [td.text.strip() for td in tr.find_all('td')]
+        if row:
+            rows.append(row)
+    
+    if not rows:
+        st.warning(f"No data rows found in table on {url}")
+        return None
 
-def get_data(source, country=None):
+    # Create a DataFrame
+    df = pd.DataFrame(rows, columns=headers)
+    return df
+
+def get_data(source):
     urls = {
-        'Inflation': 'https://www.imf.org/external/datamapper/PCPIPCH@WEO/OEMDC/ADVEC/WEOWORLD',
-        'Food Inflation': 'https://tradingeconomics.com/country-list/food-inflation',
-        'Commodities': 'https://tradingeconomics.com/commodities'
+        'Brent Oil Prices': 'https://www.theglobaleconomy.com/world/brent_oil_prices/',
+        'Gold Prices': 'https://www.theglobaleconomy.com/world/gold_prices/',
     }
     
-    if source == 'Inflation':
-        df = scrape_imf(urls[source])
-    elif source in ['Food Inflation', 'Commodities']:
-        df = scrape_trading_economics(urls[source])
+    if source in urls:
+        df = scrape_global_economy(urls[source])
     else:
-        df = scrape_custom_url(source)
-    
-    if df is not None and country:
-        df = df[df['Country'].str.contains(country, case=False, na=False)]
+        st.error(f"Unsupported data source: {source}")
+        return None
     
     return df
 
-def create_graph(df, country):
-    if 'Country' in df.columns:
-        df = df[df['Country'].str.contains(country, case=False, na=False)]
-    
-    numeric_columns = df.select_dtypes(include=[np.number]).columns
-    if len(numeric_columns) > 1:
-        fig = px.line(df, x=df.columns[0], y=numeric_columns[1:], title=f'Data for {country}')
-    else:
-        st.warning("Not enough numeric data to create a graph.")
-        fig = None
-    
-    return fig
+def create_graph(df):
+    if df is not None and not df.empty:
+        df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
+        df['Value'] = pd.to_numeric(df['Value'], errors='coerce')
+        df = df.dropna()
+        
+        fig = px.line(df, x='Year', y='Value', title=f'Historical Data')
+        return fig
+    return None
 
 if __name__ == "__main__":
     st.write("This is a module and should not be run directly.")
