@@ -5,6 +5,7 @@ import io
 import streamlit as st
 import plotly.express as px
 import re
+import json
 
 def scrape_global_economy(url):
     headers = {
@@ -15,12 +16,13 @@ def scrape_global_economy(url):
         response.raise_for_status()
     except requests.RequestException as e:
         st.error(f"Failed to fetch {url}: {str(e)}")
-        return None
+        return None, None, None
 
     soup = BeautifulSoup(response.text, 'html.parser')
     
     # Extract the commodity name
-    commodity = soup.find('h2', style="margin: 0; display: inline-block; font-size: 13px;").text.strip()
+    commodity_element = soup.find('h2', style="margin: 0; display: inline-block; font-size: 13px;")
+    commodity = commodity_element.text.strip() if commodity_element else "Unknown Commodity"
 
     # Extract other details
     details = {}
@@ -33,7 +35,8 @@ def scrape_global_economy(url):
             value = td.text.strip()
             details[key] = value
 
-    # Extract historical data from the graph image URL
+    # Try to extract historical data from the graph image URL
+    df = pd.DataFrame()
     graph_img = soup.find('img', id='graphImage')
     if graph_img:
         graph_url = graph_img['src']
@@ -41,15 +44,29 @@ def scrape_global_economy(url):
         if match:
             indicator = match.group(1)
             historical_data_url = f"https://www.theglobaleconomy.com/api/graph_data_json3.php?period=0&country=world&indicator={indicator}"
-            historical_data = requests.get(historical_data_url).json()
-            df = pd.DataFrame(historical_data)
-            df.columns = ['Year', 'Value']
-        else:
-            df = pd.DataFrame()
-    else:
-        df = pd.DataFrame()
+            try:
+                historical_data_response = requests.get(historical_data_url)
+                historical_data_response.raise_for_status()
+                historical_data = historical_data_response.json()
+                df = pd.DataFrame(historical_data)
+                df.columns = ['Year', 'Value']
+            except (requests.RequestException, json.JSONDecodeError) as e:
+                st.warning(f"Failed to fetch historical data: {str(e)}")
+                # Fallback: Try to extract data from the page content
+                df = extract_data_from_page(soup)
 
     return commodity, details, df
+
+def extract_data_from_page(soup):
+    # Look for a table with historical data
+    table = soup.find('table', {'id': 'tableHTML'})
+    if table:
+        df = pd.read_html(str(table))[0]
+        df.columns = ['Year', 'Value']
+        return df
+    else:
+        st.warning("Could not find historical data table on the page.")
+        return pd.DataFrame()
 
 def get_data(source):
     urls = {
