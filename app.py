@@ -8,26 +8,41 @@ if 'assistant' not in st.session_state:
     st.session_state.assistant = create_assistant()
 if 'thread' not in st.session_state:
     st.session_state.thread = create_thread()
+if 'all_data' not in st.session_state:
+    st.session_state.all_data = None
 
 st.title("Economic Data Scraper with AI Analysis")
 
 if st.button("Run Scraper"):
     with st.spinner("Scraping websites..."):
-        all_data, filename = run_scraper()
-    st.success(f"Data saved to {filename}")
+        all_data, output = run_scraper()
     
-    # Display scraped data
-    for key, df in all_data.items():
-        st.subheader(key)
-        st.dataframe(df)
+    if all_data is not None and output is not None:
+        st.session_state.all_data = all_data
+        st.success("Data successfully scraped!")
+        
+        # Offer the Excel file for download
+        st.download_button(
+            label="Download Excel file",
+            data=output.getvalue(),
+            file_name="scraped_data.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        # Display scraped data
+        for key, df in all_data.items():
+            st.subheader(key)
+            st.dataframe(df)
+    else:
+        st.error("Failed to scrape any data. Please try again later.")
 
 # AI Chat Interface
 st.header("Chat with AI about Scraped Data")
 user_input = st.text_input("Ask a question about the scraped economic data:")
 if st.button("Send"):
-    if 'all_data' in locals():
+    if st.session_state.all_data is not None:
         context = f"Here's a summary of the scraped economic data:\n\n"
-        for key, df in all_data.items():
+        for key, df in st.session_state.all_data.items():
             context += f"{key}:\n{df.head().to_string()}\n\n"
         
         prompt = f"{context}\nUser question: {user_input}"
