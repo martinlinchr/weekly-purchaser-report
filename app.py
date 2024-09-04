@@ -2,12 +2,31 @@ import streamlit as st
 import pandas as pd
 import sys
 import subprocess
+import os
+from dotenv import load_dotenv
 
 def install_requirements():
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
 # Call this function at the beginning of your script
 install_requirements()
+
+# Load environment variables
+load_dotenv()
+
+# Get the API key
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
+    st.stop()
+
+from scraper import run_scraper
+from ai_integration import create_assistant, create_thread, chat_with_assistant
+
+# Initialize OpenAI client with the API key
+import openai
+openai.api_key = api_key
 
 from scraper import run_scraper
 from ai_integration import create_assistant, create_thread, chat_with_assistant
