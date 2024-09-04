@@ -11,24 +11,33 @@ selected_source = st.selectbox("Select data source:", data_sources)
 if st.button("Fetch Data"):
     if selected_source:
         with st.spinner("Fetching data..."):
-            df = get_data(selected_source)
+            commodity, details, df = get_data(selected_source)
         
-        if df is not None and not df.empty:
+        if commodity and details:
             st.success("Data fetched successfully!")
-            st.dataframe(df)
             
-            fig = create_graph(df)
-            if fig:
-                st.plotly_chart(fig)
+            st.subheader(commodity)
+            for key, value in details.items():
+                st.write(f"{key.capitalize()}: {value}")
             
-            # Provide download link for the data
-            csv = df.to_csv(index=False)
-            st.download_button(
-                label="Download data as CSV",
-                data=csv,
-                file_name=f"{selected_source.lower().replace(' ', '_')}_data.csv",
-                mime="text/csv",
-            )
+            if not df.empty:
+                st.subheader("Historical Data")
+                st.dataframe(df)
+                
+                fig = create_graph(df, commodity)
+                if fig:
+                    st.plotly_chart(fig)
+                
+                # Provide download link for the data
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="Download historical data as CSV",
+                    data=csv,
+                    file_name=f"{selected_source.lower().replace(' ', '_')}_data.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.warning("No historical data available.")
         else:
             st.error("No data found. Please try again.")
     else:
