@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import io
 import streamlit as st
 import plotly.express as px
 import re
@@ -16,7 +15,7 @@ def scrape_global_economy(url):
         response.raise_for_status()
     except requests.RequestException as e:
         st.error(f"Failed to fetch {url}: {str(e)}")
-        return None, None, None
+        return None, None, None, None
 
     soup = BeautifulSoup(response.text, 'html.parser')
     
@@ -35,27 +34,14 @@ def scrape_global_economy(url):
             value = td.text.strip()
             details[key] = value
 
-    # Try to extract historical data from the graph image URL
-    df = pd.DataFrame()
+    # Extract graph image URL
     graph_img = soup.find('img', id='graphImage')
-    if graph_img:
-        graph_url = graph_img['src']
-        match = re.search(r'i=(\w+)$', graph_url)
-        if match:
-            indicator = match.group(1)
-            historical_data_url = f"https://www.theglobaleconomy.com/api/graph_data_json3.php?period=0&country=world&indicator={indicator}"
-            try:
-                historical_data_response = requests.get(historical_data_url)
-                historical_data_response.raise_for_status()
-                historical_data = historical_data_response.json()
-                df = pd.DataFrame(historical_data)
-                df.columns = ['Year', 'Value']
-            except (requests.RequestException, json.JSONDecodeError) as e:
-                st.warning(f"Failed to fetch historical data: {str(e)}")
-                # Fallback: Try to extract data from the page content
-                df = extract_data_from_page(soup)
+    graph_url = graph_img['src'] if graph_img else None
 
-    return commodity, details, df
+    # Try to extract historical data from the table
+    df = extract_data_from_page(soup)
+
+    return commodity, details, df, graph_url
 
 def extract_data_from_page(soup):
     # Look for a table with historical data
@@ -78,7 +64,7 @@ def get_data(source):
         return scrape_global_economy(urls[source])
     else:
         st.error(f"Unsupported data source: {source}")
-        return None, None, None
+        return None, None, None, None
 
 def create_graph(df, title):
     if df is not None and not df.empty:
