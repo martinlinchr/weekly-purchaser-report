@@ -43,4 +43,38 @@ def scrape_website(url):
     df = pd.DataFrame(rows, columns=headers)
     return df
 
-# ... rest of the file remains the same
+def run_scraper():
+    urls = {
+        'PMI': 'https://www.theglobaleconomy.com/rankings/pmi_composite/',
+        'Inflation': 'https://www.theglobaleconomy.com/rankings/Inflation/',
+        'Diesel Prices': 'https://www.theglobaleconomy.com/rankings/diesel_prices/'
+    }
+    
+    all_data = {}
+    for key, url in urls.items():
+        st.info(f"Scraping data for {key}...")
+        df = scrape_website(url)
+        if df is not None and not df.empty:
+            all_data[key] = df
+            st.success(f"Successfully scraped data for {key}")
+        else:
+            st.error(f"Failed to scrape data for {key}")
+    
+    if not all_data:
+        st.error("No data was successfully scraped.")
+        return None, None
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"scraped_data_{timestamp}.xlsx"
+    
+    # Save to BytesIO object instead of a file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        for key, df in all_data.items():
+            df.to_excel(writer, sheet_name=key, index=False)
+    
+    st.success(f"Data prepared for {filename}")
+    return all_data, output
+
+if __name__ == "__main__":
+    run_scraper()
