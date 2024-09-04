@@ -1,80 +1,69 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-from datetime import datetime
 import io
 import streamlit as st
+import plotly.express as px
 
-def scrape_website(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()  # Raise an exception for bad status codes
-    except requests.RequestException as e:
-        st.error(f"Failed to fetch {url}: {str(e)}")
-        return None
-
+def scrape_imf(url):
+    response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Find the table with id 'benchmarkTable'
-    table = soup.find('table', {'id': 'benchmarkTable'})
-    
-    if not table:
-        st.warning(f"No table with id 'benchmarkTable' found on {url}")
-        return None
+    script_tag = soup.find('script', {'id': 'mapJsonPayload'})
+    if script_tag:
+        data = eval(script_tag.string)
+        df = pd.DataFrame(data['values']).T
+        df.columns = ['Country'] + list(data['periods'])
+        return df
+    return None
 
-    # Extract table headers
-    headers = [th.text.strip() for th in table.find('thead').find_all('th')]
-    
-    # Extract table rows
-    rows = []
-    for tr in table.find('tbody').find_all('tr'):
-        row = [td.text.strip() for td in tr.find_all('td')]
-        if row:
-            rows.append(row)
-    
-    if not rows:
-        st.warning(f"No data rows found in table on {url}")
-        return None
+def scrape_trading_economics(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    table = soup.find('table', {'class': 'table-hover'})
+    if table:
+        df = pd.read_html(str(table))[0]
+        return df
+    return None
 
-    # Create a DataFrame
-    df = pd.DataFrame(rows, columns=headers)
+def scrape_custom_url(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    tables = pd.read_html(response.text)
+    if tables:
+        return tables[0]  # Return the first table found
+    return None
+
+def get_data(source, country=None):
+    urls = {
+        'Inflation': 'https://www.imf.org/external/datamapper/PCPIPCH@WEO/OEMDC/ADVEC/WEOWORLD',
+        'Food Inflation': 'https://tradingeconomics.com/country-list/food-inflation',
+        'Commodities': 'https://tradingeconomics.com/commodities'
+    }
+    
+    if source == 'Inflation':
+        df = scrape_imf(urls[source])
+    elif source in ['Food Inflation', 'Commodities']:
+        df = scrape_trading_economics(urls[source])
+    else:
+        df = scrape_custom_url(source)
+    
+    if df is not None and country:
+        df = df[df['Country'].str.contains(country, case=False, na=False)]
+    
     return df
 
-def run_scraper():
-    urls = {
-        'PMI': 'https://www.theglobaleconomy.com/rankings/pmi_composite/',
-        'Inflation': 'https://www.theglobaleconomy.com/rankings/Inflation/',
-        'Diesel Prices': 'https://www.theglobaleconomy.com/rankings/diesel_prices/'
-    }
+def create_graph(df, country):
+    if 'Country' in df.columns:
+        df = df[df['Country'].str.contains(country, case=False, na=False)]
     
-    all_data = {}
-    for key, url in urls.items():
-        st.info(f"Scraping data for {key}...")
-        df = scrape_website(url)
-        if df is not None and not df.empty:
-            all_data[key] = df
-            st.success(f"Successfully scraped data for {key}")
-        else:
-            st.error(f"Failed to scrape data for {key}")
+    numeric_columns = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_columns) > 1:
+        fig = px.line(df, x=df.columns[0], y=numeric_columns[1:], title=f'Data for {country}')
+    else:
+        st.warning("Not enough numeric data to create a graph.")
+        fig = None
     
-    if not all_data:
-        st.error("No data was successfully scraped.")
-        return None, None
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"scraped_data_{timestamp}.xlsx"
-    
-    # Save to BytesIO object instead of a file
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for key, df in all_data.items():
-            df.to_excel(writer, sheet_name=key, index=False)
-    
-    st.success(f"Data prepared for {filename}")
-    return all_data, output
+    return fig
 
 if __name__ == "__main__":
-    run_scraper()
+    st.write("This is a module and should not be run directly.")
