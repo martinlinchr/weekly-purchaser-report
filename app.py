@@ -1,58 +1,52 @@
 import streamlit as st
 import pandas as pd
-from scraper import run_scraper
-from ai_integration import create_assistant, create_thread, chat_with_assistant
+from scraper import get_data, create_graph
 
-# Initialize session state
-if 'assistant' not in st.session_state:
-    st.session_state.assistant = create_assistant()
-if 'thread' not in st.session_state:
-    st.session_state.thread = create_thread()
-if 'all_data' not in st.session_state:
-    st.session_state.all_data = None
+st.title("Economic Data Analyzer")
 
-st.title("Economic Data Scraper with AI Analysis")
+# Data source selection
+data_sources = ['Inflation', 'Food Inflation', 'Commodities', 'Custom URL']
+selected_source = st.selectbox("Select data source:", data_sources)
 
-if st.button("Run Scraper"):
-    with st.spinner("Scraping websites..."):
-        all_data, output = run_scraper()
-    
-    if all_data is not None and output is not None:
-        st.session_state.all_data = all_data
-        st.success("Data successfully scraped!")
+if selected_source == 'Custom URL':
+    custom_url = st.text_input("Enter custom URL:")
+    if custom_url:
+        selected_source = custom_url
+
+# Country input
+country = st.text_input("Enter country or region (optional):")
+
+if st.button("Fetch Data"):
+    if selected_source:
+        with st.spinner("Fetching data..."):
+            df = get_data(selected_source, country)
         
-        # Offer the Excel file for download
-        st.download_button(
-            label="Download Excel file",
-            data=output.getvalue(),
-            file_name="scraped_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        
-        # Display scraped data
-        for key, df in all_data.items():
-            st.subheader(key)
+        if df is not None and not df.empty:
+            st.success("Data fetched successfully!")
             st.dataframe(df)
+            
+            if country:
+                fig = create_graph(df, country)
+                if fig:
+                    st.plotly_chart(fig)
+            
+            # Provide download link for the data
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download data as CSV",
+                data=csv,
+                file_name="economic_data.csv",
+                mime="text/csv",
+            )
+        else:
+            st.error("No data found. Please check your input and try again.")
     else:
-        st.error("Failed to scrape any data. Please check the error messages above and try again later.")
+        st.warning("Please select a data source.")
 
-# AI Chat Interface
-st.header("Chat with AI about Scraped Data")
-user_input = st.text_input("Ask a question about the scraped economic data:")
-if st.button("Send"):
-    if st.session_state.all_data is not None:
-        context = f"Here's a summary of the scraped economic data:\n\n"
-        for key, df in st.session_state.all_data.items():
-            context += f"{key}:\n{df.head().to_string()}\n\n"
-        
-        prompt = f"{context}\nUser question: {user_input}"
-        
-        with st.spinner("AI is thinking..."):
-            response = chat_with_assistant(st.session_state.assistant.id, st.session_state.thread.id, prompt)
-        st.text_area("AI Response:", value=response, height=200, max_chars=None, key=None)
-    else:
-        st.warning("Please run the scraper first to gather data for the AI to analyze.")
+# AI Chat Interface (placeholder for future implementation)
+st.header("Chat with AI about the Data")
+st.text("AI chat functionality will be implemented in a future update.")
 
 # Run the Streamlit app
 if __name__ == "__main__":
-    st.sidebar.info("Click 'Run Scraper' to start gathering economic data.")
+    st.sidebar.info("Select a data source and optionally enter a country to analyze economic data.")
