@@ -4,7 +4,6 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 import re
-import json
 
 def scrape_global_economy(url):
     headers = {
@@ -15,7 +14,7 @@ def scrape_global_economy(url):
         response.raise_for_status()
     except requests.RequestException as e:
         st.error(f"Failed to fetch {url}: {str(e)}")
-        return None, None, None, None
+        return None, None, None, None, None
 
     soup = BeautifulSoup(response.text, 'html.parser')
     
@@ -34,14 +33,21 @@ def scrape_global_economy(url):
             value = td.text.strip()
             details[key] = value
 
-    # Extract graph image URL
-    graph_img = soup.find('img', id='graphImage')
-    graph_url = graph_img['src'] if graph_img else None
+    # Extract graph image URLs
+    graph_imgs = soup.find_all('img', id='graphImage')
+    recent_graph_url = None
+    historical_graph_url = None
+    
+    if len(graph_imgs) >= 2:
+        recent_graph_url = graph_imgs[0]['src']
+        historical_graph_url = graph_imgs[1]['src']
+    elif len(graph_imgs) == 1:
+        recent_graph_url = graph_imgs[0]['src']
 
     # Try to extract historical data from the table
     df = extract_data_from_page(soup)
 
-    return commodity, details, df, graph_url
+    return commodity, details, df, recent_graph_url, historical_graph_url
 
 def extract_data_from_page(soup):
     # Look for a table with historical data
@@ -64,7 +70,7 @@ def get_data(source):
         return scrape_global_economy(urls[source])
     else:
         st.error(f"Unsupported data source: {source}")
-        return None, None, None, None
+        return None, None, None, None, None
 
 def create_graph(df, title):
     if df is not None and not df.empty:
