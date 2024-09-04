@@ -11,7 +11,7 @@ selected_source = st.selectbox("Select data source:", data_sources)
 if st.button("Fetch Data"):
     if selected_source:
         with st.spinner("Fetching data..."):
-            commodity, details, df, graph_url = get_data(selected_source)
+            commodity, details, df, recent_graph_url, historical_graph_url = get_data(selected_source)
         
         if commodity and details:
             st.success("Data fetched successfully!")
@@ -20,8 +20,13 @@ if st.button("Fetch Data"):
             for key, value in details.items():
                 st.write(f"{key.capitalize()}: {value}")
             
-            if graph_url:
-                st.image(graph_url, caption="Recent values", use_column_width=True)
+            if recent_graph_url:
+                st.subheader("Recent Values")
+                st.image(recent_graph_url, use_column_width=True)
+            
+            if historical_graph_url:
+                st.subheader("Longer Historical Series")
+                st.image(historical_graph_url, use_column_width=True)
             
             if not df.empty:
                 st.subheader("Historical Data")
