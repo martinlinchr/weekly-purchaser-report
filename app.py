@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from scraper import get_data, create_graph
+from scraper import get_data, create_graph, REGIONS
 
 st.title("Economic Data Analyzer")
 
@@ -42,11 +42,17 @@ for category, sources in data_sources.items():
     for source, url in sources.items():
         selected_sources[source] = st.sidebar.checkbox(source)
 
-# Country selection for Economic Indicators
+# Country/Region selection for Economic Indicators
 if any(selected_sources[source] for source in data_sources['Economic Indicators']):
-    country = st.sidebar.text_input("Enter a country for Economic Indicators:")
+    country_or_region_options = ['Select a country/region'] + list(REGIONS.keys()) + ['Other']
+    country_or_region = st.sidebar.selectbox("Select a country or region for Economic Indicators:", country_or_region_options)
+    
+    if country_or_region == 'Other':
+        country_or_region = st.sidebar.text_input("Enter a specific country:")
+    elif country_or_region == 'Select a country/region':
+        country_or_region = None
 else:
-    country = None
+    country_or_region = None
 
 if st.sidebar.button("Fetch Selected Data"):
     for source, selected in selected_sources.items():
@@ -60,7 +66,7 @@ if st.sidebar.button("Fetch Selected Data"):
                 else:
                     is_ranking = source in data_sources['Economic Indicators']
                     url = data_sources['Commodities'].get(source) or data_sources['Economic Indicators'].get(source)
-                    commodity, details, df, recent_graph_url, historical_graph_url = get_data(url, is_ranking, country if is_ranking else None)
+                    commodity, details, df, recent_graph_url, historical_graph_url = get_data(url, is_ranking, country_or_region if is_ranking else None)
                 
                     if commodity and details:
                         st.success(f"Data fetched successfully for {source}!")
