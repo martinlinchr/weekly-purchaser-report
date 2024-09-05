@@ -42,6 +42,12 @@ for category, sources in data_sources.items():
     for source, url in sources.items():
         selected_sources[source] = st.sidebar.checkbox(source)
 
+# Country selection for Economic Indicators
+if any(selected_sources[source] for source in data_sources['Economic Indicators']):
+    country = st.sidebar.text_input("Enter a country for Economic Indicators:")
+else:
+    country = None
+
 if st.sidebar.button("Fetch Selected Data"):
     for source, selected in selected_sources.items():
         if selected:
@@ -52,7 +58,9 @@ if st.sidebar.button("Fetch Selected Data"):
                     if df is not None:
                         st.dataframe(df)
                 else:
-                    commodity, details, df, recent_graph_url, historical_graph_url = get_data(data_sources['Commodities'].get(source) or data_sources['Economic Indicators'].get(source))
+                    is_ranking = source in data_sources['Economic Indicators']
+                    url = data_sources['Commodities'].get(source) or data_sources['Economic Indicators'].get(source)
+                    commodity, details, df, recent_graph_url, historical_graph_url = get_data(url, is_ranking, country if is_ranking else None)
                 
                     if commodity and details:
                         st.success(f"Data fetched successfully for {source}!")
@@ -68,13 +76,14 @@ if st.sidebar.button("Fetch Selected Data"):
                             st.subheader("Longer Historical Series")
                             st.image(historical_graph_url, use_column_width=True)
                         
-                        if not df.empty:
-                            st.subheader("Historical Data")
+                        if df is not None and not df.empty:
+                            st.subheader("Data Table")
                             st.dataframe(df)
                             
-                            fig = create_graph(df, commodity)
-                            if fig:
-                                st.plotly_chart(fig)
+                            if not is_ranking:
+                                fig = create_graph(df, commodity)
+                                if fig:
+                                    st.plotly_chart(fig)
                             
                             # Provide download link for the data
                             csv = df.to_csv(index=False)
@@ -85,7 +94,7 @@ if st.sidebar.button("Fetch Selected Data"):
                                 mime="text/csv",
                             )
                         else:
-                            st.warning("No historical data available.")
+                            st.warning("No data available.")
                     else:
                         st.error(f"No data found for {source}. Please try again.")
 
