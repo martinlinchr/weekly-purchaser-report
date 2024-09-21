@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 from scraper import get_data, create_graph, REGIONS
-import openai
+from openai import OpenAI
 
 # Securely get the OpenAI API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("Economic Data Analyzer")
 
@@ -75,12 +75,14 @@ selected_inflations = st.sidebar.multiselect("Select regions for inflation data"
 def chat_with_ai(data_description, user_question):
     try:
         prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=prompt,
-            max_tokens=150
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an AI assistant that analyzes economic data and answers questions about it."},
+                {"role": "user", "content": prompt}
+            ]
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.error(f"An error occurred while communicating with the AI: {str(e)}")
         return None
@@ -138,13 +140,8 @@ if st.sidebar.button("Fetch Selected Data"):
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
                     df = df.round(2)
+                    st.dataframe(df)
                     st.session_state.all_data[selected_indicator] = df
-                    country_search = st.text_input(f"Search for a country in {selected_indicator}")
-                    if country_search:
-                        filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
-                        st.dataframe(filtered_df)
-                    else:
-                        st.dataframe(df)
                     csv = df.to_csv(index=False)
                     st.download_button(
                         label=f"Download {selected_indicator} data as CSV",
@@ -167,13 +164,8 @@ if st.sidebar.button("Fetch Selected Data"):
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
                     df = df.round(2)
+                    st.dataframe(df)
                     st.session_state.all_data[f"Inflation - {selected_inflation}"] = df
-                    country_search = st.text_input(f"Search for a country in {selected_inflation} inflation data")
-                    if country_search:
-                        filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
-                        st.dataframe(filtered_df)
-                    else:
-                        st.dataframe(df)
                     csv = df.to_csv(index=False)
                     st.download_button(
                         label=f"Download inflation data for {selected_inflation} as CSV",
