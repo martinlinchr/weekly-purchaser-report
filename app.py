@@ -22,7 +22,6 @@ data_sources = {
         'PMI Services': 'https://www.theglobaleconomy.com/rankings/pmi_services/',
         'PMI Composite': 'https://www.theglobaleconomy.com/rankings/pmi_composite/',
         'PMI Manufacturing': 'https://www.theglobaleconomy.com/rankings/pmi_manufacturing/',
-        'Inflation': 'https://www.theglobaleconomy.com/rankings/Inflation/',
         'Unemployment Rate': 'https://www.theglobaleconomy.com/rankings/Unemployment_rate/',
         'Government Debt': 'https://www.theglobaleconomy.com/rankings/Government_debt/',
         'GDP Growth Outlook (IMF)': 'https://www.theglobaleconomy.com/rankings/gdp_growth_outlook_imf/',
@@ -33,76 +32,126 @@ data_sources = {
     }
 }
 
+inflation_urls = {
+    'Europe': 'https://www.theglobaleconomy.com/rankings/Inflation/Europe/',
+    'European Union': 'https://www.theglobaleconomy.com/rankings/Inflation/European-union/',
+    'Eurozone': 'https://www.theglobaleconomy.com/rankings/Inflation/Eurozone/',
+    'Asia': 'https://www.theglobaleconomy.com/rankings/Inflation/Asia/',
+    'Australia': 'https://www.theglobaleconomy.com/rankings/Inflation/Australia/',
+    'South America': 'https://www.theglobaleconomy.com/rankings/Inflation/South-America/',
+    'North America': 'https://www.theglobaleconomy.com/rankings/Inflation/North-America/',
+    'Africa': 'https://www.theglobaleconomy.com/rankings/Inflation/Africa/',
+    'MENA': 'https://www.theglobaleconomy.com/rankings/Inflation/MENA/',
+    'G7': 'https://www.theglobaleconomy.com/rankings/Inflation/G7/',
+    'G20': 'https://www.theglobaleconomy.com/rankings/Inflation/G20/',
+    'OPEC': 'https://www.theglobaleconomy.com/rankings/Inflation/OPEC/',
+    'NATO': 'https://www.theglobaleconomy.com/rankings/Inflation/NATO/',
+    'MSCI Emerging Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Emerging-Markets/',
+    'MSCI Frontier Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Frontier-Markets/',
+    'MSCI Developed Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Developed%20Markets/'
+}
+
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
 
-selected_sources = {}
-for category, sources in data_sources.items():
-    st.sidebar.subheader(category)
-    for source, url in sources.items():
-        selected_sources[source] = st.sidebar.checkbox(source)
+# Commodities dropdown
+st.sidebar.subheader("Commodities")
+selected_commodity = st.sidebar.selectbox("Select a commodity", ['None'] + list(data_sources['Commodities'].keys()))
 
-# Country/Region selection for Economic Indicators
-if any(selected_sources[source] for source in data_sources['Economic Indicators']):
-    country_or_region_options = ['Select a country/region'] + list(REGIONS.keys()) + ['Other']
-    country_or_region = st.sidebar.selectbox("Select a country or region for Economic Indicators:", country_or_region_options)
-    
-    if country_or_region == 'Other':
-        country_or_region = st.sidebar.text_input("Enter a specific country:")
-    elif country_or_region == 'Select a country/region':
-        country_or_region = None
-else:
-    country_or_region = None
+# Economic Indicators dropdown
+st.sidebar.subheader("Economic Indicators")
+selected_indicator = st.sidebar.selectbox("Select an economic indicator", ['None'] + list(data_sources['Economic Indicators'].keys()))
+
+# Inflation data dropdown
+st.sidebar.subheader("Inflation Data")
+selected_inflation = st.sidebar.selectbox("Select a region for inflation data", ['None'] + list(inflation_urls.keys()))
 
 if st.sidebar.button("Fetch Selected Data"):
-    for source, selected in selected_sources.items():
-        if selected:
-            st.subheader(source)
-            with st.spinner(f"Fetching data for {source}..."):
-                if source == 'Trading Economics Commodities':
-                    commodity, df = get_data(source)
-                    if df is not None:
+    # Fetch commodity data
+    if selected_commodity != 'None':
+        st.subheader(selected_commodity)
+        with st.spinner(f"Fetching data for {selected_commodity}..."):
+            if selected_commodity == 'Trading Economics Commodities':
+                commodity, df = get_data(data_sources['Commodities'][selected_commodity])
+                if df is not None:
+                    st.dataframe(df)
+            else:
+                commodity, details, df, recent_graph_url, historical_graph_url = get_data(data_sources['Commodities'][selected_commodity])
+                if commodity and details:
+                    st.success(f"Data fetched successfully for {selected_commodity}!")
+                    for key, value in details.items():
+                        st.write(f"{key.capitalize()}: {value}")
+                    if recent_graph_url:
+                        st.subheader("Recent Values")
+                        st.image(recent_graph_url, use_column_width=True)
+                    if historical_graph_url:
+                        st.subheader("Longer Historical Series")
+                        st.image(historical_graph_url, use_column_width=True)
+                    if df is not None and not df.empty:
+                        st.subheader("Data Table")
                         st.dataframe(df)
-                else:
-                    is_ranking = source in data_sources['Economic Indicators']
-                    url = data_sources['Commodities'].get(source) or data_sources['Economic Indicators'].get(source)
-                    commodity, details, df, recent_graph_url, historical_graph_url = get_data(url, is_ranking, country_or_region if is_ranking else None)
-                
-                    if commodity and details:
-                        st.success(f"Data fetched successfully for {source}!")
-                        
-                        for key, value in details.items():
-                            st.write(f"{key.capitalize()}: {value}")
-                        
-                        if recent_graph_url:
-                            st.subheader("Recent Values")
-                            st.image(recent_graph_url, use_column_width=True)
-                        
-                        if historical_graph_url:
-                            st.subheader("Longer Historical Series")
-                            st.image(historical_graph_url, use_column_width=True)
-                        
-                        if df is not None and not df.empty:
-                            st.subheader("Data Table")
-                            st.dataframe(df)
-                            
-                            if not is_ranking:
-                                fig = create_graph(df, commodity)
-                                if fig:
-                                    st.plotly_chart(fig)
-                            
-                            # Provide download link for the data
-                            csv = df.to_csv(index=False)
-                            st.download_button(
-                                label=f"Download {source} data as CSV",
-                                data=csv,
-                                file_name=f"{source.lower().replace(' ', '_')}_data.csv",
-                                mime="text/csv",
-                            )
-                        else:
-                            st.warning("No data available.")
+                        fig = create_graph(df, commodity)
+                        if fig:
+                            st.plotly_chart(fig)
+                        csv = df.to_csv(index=False)
+                        st.download_button(
+                            label=f"Download {selected_commodity} data as CSV",
+                            data=csv,
+                            file_name=f"{selected_commodity.lower().replace(' ', '_')}_data.csv",
+                            mime="text/csv",
+                        )
                     else:
-                        st.error(f"No data found for {source}. Please try again.")
+                        st.warning("No data available.")
+                else:
+                    st.error(f"No data found for {selected_commodity}. Please try again.")
+
+    # Fetch economic indicator data
+    if selected_indicator != 'None':
+        st.subheader(selected_indicator)
+        with st.spinner(f"Fetching data for {selected_indicator}..."):
+            indicator, details, df, _, _ = get_data(data_sources['Economic Indicators'][selected_indicator], is_ranking=True)
+            if indicator and details:
+                st.success(f"Data fetched successfully for {selected_indicator}!")
+                for key, value in details.items():
+                    st.write(f"{key.capitalize()}: {value}")
+                if df is not None and not df.empty:
+                    st.subheader("Data Table")
+                    st.dataframe(df)
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label=f"Download {selected_indicator} data as CSV",
+                        data=csv,
+                        file_name=f"{selected_indicator.lower().replace(' ', '_')}_data.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.warning("No data available.")
+            else:
+                st.error(f"No data found for {selected_indicator}. Please try again.")
+
+    # Fetch inflation data
+    if selected_inflation != 'None':
+        st.subheader(f"Inflation Data for {selected_inflation}")
+        with st.spinner(f"Fetching inflation data for {selected_inflation}..."):
+            indicator, details, df, _, _ = get_data(inflation_urls[selected_inflation], is_ranking=True)
+            if indicator and details:
+                st.success(f"Inflation data fetched successfully for {selected_inflation}!")
+                for key, value in details.items():
+                    st.write(f"{key.capitalize()}: {value}")
+                if df is not None and not df.empty:
+                    st.subheader("Data Table")
+                    st.dataframe(df)
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label=f"Download inflation data for {selected_inflation} as CSV",
+                        data=csv,
+                        file_name=f"inflation_{selected_inflation.lower().replace(' ', '_')}_data.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.warning("No data available.")
+            else:
+                st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
 # Run the Streamlit app
 if __name__ == "__main__":
