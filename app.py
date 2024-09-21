@@ -54,21 +54,21 @@ inflation_urls = {
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
 
-# Commodities dropdown
+# Commodities multiselect
 st.sidebar.subheader("Commodities")
-selected_commodity = st.sidebar.selectbox("Select a commodity", ['None'] + list(data_sources['Commodities'].keys()))
+selected_commodities = st.sidebar.multiselect("Select commodities", list(data_sources['Commodities'].keys()))
 
-# Economic Indicators dropdown
+# Economic Indicators multiselect
 st.sidebar.subheader("Economic Indicators")
-selected_indicator = st.sidebar.selectbox("Select an economic indicator", ['None'] + list(data_sources['Economic Indicators'].keys()))
+selected_indicators = st.sidebar.multiselect("Select economic indicators", list(data_sources['Economic Indicators'].keys()))
 
-# Inflation data dropdown
+# Inflation data multiselect
 st.sidebar.subheader("Inflation Data")
-selected_inflation = st.sidebar.selectbox("Select a region for inflation data", ['None'] + list(inflation_urls.keys()))
+selected_inflations = st.sidebar.multiselect("Select regions for inflation data", list(inflation_urls.keys()))
 
 if st.sidebar.button("Fetch Selected Data"):
     # Fetch commodity data
-    if selected_commodity != 'None':
+    for selected_commodity in selected_commodities:
         st.subheader(selected_commodity)
         with st.spinner(f"Fetching data for {selected_commodity}..."):
             if selected_commodity == 'Trading Economics Commodities':
@@ -106,7 +106,7 @@ if st.sidebar.button("Fetch Selected Data"):
                     st.error(f"No data found for {selected_commodity}. Please try again.")
 
     # Fetch economic indicator data
-    if selected_indicator != 'None':
+    for selected_indicator in selected_indicators:
         st.subheader(selected_indicator)
         with st.spinner(f"Fetching data for {selected_indicator}..."):
             indicator, details, df, _, _ = get_data(data_sources['Economic Indicators'][selected_indicator], is_ranking=True)
@@ -130,7 +130,7 @@ if st.sidebar.button("Fetch Selected Data"):
                 st.error(f"No data found for {selected_indicator}. Please try again.")
 
     # Fetch inflation data
-    if selected_inflation != 'None':
+    for selected_inflation in selected_inflations:
         st.subheader(f"Inflation Data for {selected_inflation}")
         with st.spinner(f"Fetching inflation data for {selected_inflation}..."):
             indicator, details, df, _, _ = get_data(inflation_urls[selected_inflation], is_ranking=True)
