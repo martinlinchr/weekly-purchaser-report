@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 from scraper import get_data, create_graph, REGIONS
+import openai
+
+# Set your OpenAI API key
+openai.api_key = 'your-api-key-here'  # Replace with your actual API key
 
 st.title("Economic Data Analyzer")
 
@@ -53,6 +57,7 @@ inflation_urls = {
 
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
+st.sidebar.info("Select the data sources you want to analyze, then click 'Fetch Selected Data'.")
 
 # Commodities multiselect
 st.sidebar.subheader("Commodities")
@@ -66,7 +71,19 @@ selected_indicators = st.sidebar.multiselect("Select economic indicators", list(
 st.sidebar.subheader("Inflation Data")
 selected_inflations = st.sidebar.multiselect("Select regions for inflation data", list(inflation_urls.keys()))
 
+# Function to chat with AI about the data
+def chat_with_ai(data_description, user_question):
+    prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
+    response = openai.Completion.create(
+        engine="text-davinci-002",
+        prompt=prompt,
+        max_tokens=150
+    )
+    return response.choices[0].text.strip()
+
 if st.sidebar.button("Fetch Selected Data"):
+    all_data = {}  # Store all fetched data
+
     # Fetch commodity data
     for selected_commodity in selected_commodities:
         st.subheader(selected_commodity)
@@ -74,7 +91,8 @@ if st.sidebar.button("Fetch Selected Data"):
             if selected_commodity == 'Trading Economics Commodities':
                 commodity, df = get_data(data_sources['Commodities'][selected_commodity])
                 if df is not None:
-                    st.dataframe(df)
+                    st.dataframe(df.round(2))
+                    all_data[selected_commodity] = df
             else:
                 commodity, details, df, recent_graph_url, historical_graph_url = get_data(data_sources['Commodities'][selected_commodity])
                 if commodity and details:
@@ -89,7 +107,8 @@ if st.sidebar.button("Fetch Selected Data"):
                         st.image(historical_graph_url, use_column_width=True)
                     if df is not None and not df.empty:
                         st.subheader("Data Summary")
-                        st.dataframe(df)
+                        st.dataframe(df.round(2))
+                        all_data[selected_commodity] = df
                         
                         csv = df.to_csv(index=False)
                         st.download_button(
@@ -108,11 +127,16 @@ if st.sidebar.button("Fetch Selected Data"):
             indicator, details, df, _, _ = get_data(data_sources['Economic Indicators'][selected_indicator], is_ranking=True)
             if indicator and details:
                 st.success(f"Data fetched successfully for {selected_indicator}!")
-                for key, value in details.items():
-                    st.write(f"{key.capitalize()}: {value}")
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
-                    st.dataframe(df)
+                    df = df.round(2)
+                    all_data[selected_indicator] = df
+                    country_search = st.text_input(f"Search for a country in {selected_indicator}")
+                    if country_search:
+                        filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
+                        st.dataframe(filtered_df)
+                    else:
+                        st.dataframe(df)
                     csv = df.to_csv(index=False)
                     st.download_button(
                         label=f"Download {selected_indicator} data as CSV",
@@ -132,11 +156,16 @@ if st.sidebar.button("Fetch Selected Data"):
             indicator, details, df, _, _ = get_data(inflation_urls[selected_inflation], is_ranking=True)
             if indicator and details:
                 st.success(f"Inflation data fetched successfully for {selected_inflation}!")
-                for key, value in details.items():
-                    st.write(f"{key.capitalize()}: {value}")
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
-                    st.dataframe(df)
+                    df = df.round(2)
+                    all_data[f"Inflation - {selected_inflation}"] = df
+                    country_search = st.text_input(f"Search for a country in {selected_inflation} inflation data")
+                    if country_search:
+                        filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
+                        st.dataframe(filtered_df)
+                    else:
+                        st.dataframe(df)
                     csv = df.to_csv(index=False)
                     st.download_button(
                         label=f"Download inflation data for {selected_inflation} as CSV",
@@ -149,6 +178,16 @@ if st.sidebar.button("Fetch Selected Data"):
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
+    # Chat with AI about the data
+    if all_data:
+        st.subheader("Chat with AI about the Data")
+        user_question = st.text_input("Ask a question about the fetched data:")
+        if user_question:
+            data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in all_data.items()])
+            with st.spinner("AI is analyzing the data..."):
+                ai_response = chat_with_ai(data_description, user_question)
+            st.write("AI Response:", ai_response)
+
 # Run the Streamlit app
 if __name__ == "__main__":
-    st.sidebar.info("Select the data sources you want to analyze, then click 'Fetch Selected Data'.")
+    pass
