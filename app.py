@@ -3,7 +3,7 @@ import pandas as pd
 from scraper import get_data, create_graph, REGIONS
 import openai
 
-# OpenAI API key
+# Securely get the OpenAI API key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 st.title("Economic Data Analyzer")
@@ -55,20 +55,6 @@ inflation_urls = {
     'MSCI Developed Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Developed%20Markets/'
 }
 
-# Function to chat with AI about the data
-def chat_with_ai(data_description, user_question):
-    try:
-        prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
-        response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt=prompt,
-            max_tokens=150
-        )
-        return response.choices[0].text.strip()
-    except Exception as e:
-        st.error(f"An error occurred while communicating with the AI: {str(e)}")
-        return None
-
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
 st.sidebar.info("Select the data sources you want to analyze, then click 'Fetch Selected Data'.")
@@ -87,16 +73,24 @@ selected_inflations = st.sidebar.multiselect("Select regions for inflation data"
 
 # Function to chat with AI about the data
 def chat_with_ai(data_description, user_question):
-    prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=prompt,
-        max_tokens=150
-    )
-    return response.choices[0].text.strip()
+    try:
+        prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
+        response = openai.Completion.create(
+            engine="text-davinci-002",
+            prompt=prompt,
+            max_tokens=150
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        st.error(f"An error occurred while communicating with the AI: {str(e)}")
+        return None
+
+# Initialize session state
+if 'all_data' not in st.session_state:
+    st.session_state.all_data = {}
 
 if st.sidebar.button("Fetch Selected Data"):
-    all_data = {}  # Store all fetched data
+    st.session_state.all_data = {}  # Reset all_data
 
     # Fetch commodity data
     for selected_commodity in selected_commodities:
@@ -106,7 +100,7 @@ if st.sidebar.button("Fetch Selected Data"):
                 commodity, df = get_data(data_sources['Commodities'][selected_commodity])
                 if df is not None:
                     st.dataframe(df.round(2))
-                    all_data[selected_commodity] = df
+                    st.session_state.all_data[selected_commodity] = df
             else:
                 commodity, details, df, recent_graph_url, historical_graph_url = get_data(data_sources['Commodities'][selected_commodity])
                 if commodity and details:
@@ -122,7 +116,7 @@ if st.sidebar.button("Fetch Selected Data"):
                     if df is not None and not df.empty:
                         st.subheader("Data Summary")
                         st.dataframe(df.round(2))
-                        all_data[selected_commodity] = df
+                        st.session_state.all_data[selected_commodity] = df
                         
                         csv = df.to_csv(index=False)
                         st.download_button(
@@ -144,7 +138,7 @@ if st.sidebar.button("Fetch Selected Data"):
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
                     df = df.round(2)
-                    all_data[selected_indicator] = df
+                    st.session_state.all_data[selected_indicator] = df
                     country_search = st.text_input(f"Search for a country in {selected_indicator}")
                     if country_search:
                         filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
@@ -173,7 +167,7 @@ if st.sidebar.button("Fetch Selected Data"):
                 if df is not None and not df.empty:
                     st.subheader("Data Table")
                     df = df.round(2)
-                    all_data[f"Inflation - {selected_inflation}"] = df
+                    st.session_state.all_data[f"Inflation - {selected_inflation}"] = df
                     country_search = st.text_input(f"Search for a country in {selected_inflation} inflation data")
                     if country_search:
                         filtered_df = df[df.iloc[:, 0].str.contains(country_search, case=False, na=False)]
@@ -192,26 +186,18 @@ if st.sidebar.button("Fetch Selected Data"):
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
-    # Chat with AI about the data
-    if all_data:
-        st.subheader("Chat with AI about the Data")
-        user_question = st.text_input("Ask a question about the fetched data:")
-        if user_question:
-            data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in all_data.items()])
-            with st.spinner("AI is analyzing the data..."):
-                ai_response = chat_with_ai(data_description, user_question)
-            st.write("AI Response:", ai_response)
-
 # Chat with AI about the data
-if all_data:
+if st.session_state.all_data:
     st.subheader("Chat with AI about the Data")
     user_question = st.text_input("Ask a question about the fetched data:")
     if user_question:
-        data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in all_data.items()])
+        data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in st.session_state.all_data.items()])
         with st.spinner("AI is analyzing the data..."):
             ai_response = chat_with_ai(data_description, user_question)
         if ai_response:
             st.write("AI Response:", ai_response)
+else:
+    st.info("Fetch some data first to chat with the AI about it.")
 
 # Run the Streamlit app
 if __name__ == "__main__":
