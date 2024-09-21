@@ -52,9 +52,9 @@ def scrape_ranking_page(soup, country_or_region):
                 # For 'World', we'll use the entire dataset
                 pass
             else:
-                df = df[df['Countries'].isin(REGIONS[country_or_region])]
+                df = df[df.iloc[:, 0].isin(REGIONS[country_or_region])]
         else:
-            df = df[df['Countries'].str.contains(country_or_region, case=False, na=False)]
+            df = df[df.iloc[:, 0].str.contains(country_or_region, case=False, na=False)]
     
     if df.empty:
         st.warning(f"No data found for the selected country/region: {country_or_region}")
@@ -63,12 +63,17 @@ def scrape_ranking_page(soup, country_or_region):
     indicator = soup.find('h2', style="margin: 0; display: inline-block; font-size: 13px;")
     indicator = indicator.text.strip() if indicator else "Unknown Indicator"
 
+    # Assuming the first column is always the country/region name
+    # and the second column is always the latest value
+    country_col = df.columns[0]
+    value_col = df.columns[1]
+
     if country_or_region in REGIONS:
-        latest_value = df['Latest value'].mean()
-        reference = df['Reference'].mode()[0] if not df['Reference'].empty else 'N/A'
+        latest_value = df[value_col].mean()
+        reference = df.iloc[:, 2].mode()[0] if len(df.columns) > 2 else 'N/A'
     else:
-        latest_value = df.iloc[0]['Latest value']
-        reference = df.iloc[0]['Reference']
+        latest_value = df.iloc[0][value_col]
+        reference = df.iloc[0, 2] if len(df.columns) > 2 else 'N/A'
 
     details = {
         'country/region': country_or_region,
