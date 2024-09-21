@@ -3,8 +3,8 @@ import pandas as pd
 from scraper import get_data, create_graph, REGIONS
 import openai
 
-# Set your OpenAI API key
-openai.api_key = 'your-api-key-here'  # Replace with your actual API key
+# OpenAI API key
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 st.title("Economic Data Analyzer")
 
@@ -54,6 +54,20 @@ inflation_urls = {
     'MSCI Frontier Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Frontier-Markets/',
     'MSCI Developed Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Developed%20Markets/'
 }
+
+# Function to chat with AI about the data
+def chat_with_ai(data_description, user_question):
+    try:
+        prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
+        response = openai.Completion.create(
+            engine="text-davinci-002",
+            prompt=prompt,
+            max_tokens=150
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        st.error(f"An error occurred while communicating with the AI: {str(e)}")
+        return None
 
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
@@ -186,6 +200,17 @@ if st.sidebar.button("Fetch Selected Data"):
             data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in all_data.items()])
             with st.spinner("AI is analyzing the data..."):
                 ai_response = chat_with_ai(data_description, user_question)
+            st.write("AI Response:", ai_response)
+
+# Chat with AI about the data
+if all_data:
+    st.subheader("Chat with AI about the Data")
+    user_question = st.text_input("Ask a question about the fetched data:")
+    if user_question:
+        data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in all_data.items()])
+        with st.spinner("AI is analyzing the data..."):
+            ai_response = chat_with_ai(data_description, user_question)
+        if ai_response:
             st.write("AI Response:", ai_response)
 
 # Run the Streamlit app
