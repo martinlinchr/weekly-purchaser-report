@@ -88,11 +88,9 @@ if st.sidebar.button("Fetch Selected Data"):
                         st.subheader("Longer Historical Series")
                         st.image(historical_graph_url, use_column_width=True)
                     if df is not None and not df.empty:
-                        st.subheader("Data Table")
+                        st.subheader("Data Summary")
                         st.dataframe(df)
-                        fig = create_graph(df, commodity)
-                        if fig:
-                            st.plotly_chart(fig)
+                        
                         csv = df.to_csv(index=False)
                         st.download_button(
                             label=f"Download {selected_commodity} data as CSV",
@@ -100,8 +98,6 @@ if st.sidebar.button("Fetch Selected Data"):
                             file_name=f"{selected_commodity.lower().replace(' ', '_')}_data.csv",
                             mime="text/csv",
                         )
-                    else:
-                        st.warning("No data available.")
                 else:
                     st.error(f"No data found for {selected_commodity}. Please try again.")
 
