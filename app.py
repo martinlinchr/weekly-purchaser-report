@@ -93,9 +93,12 @@ if 'all_data' not in st.session_state:
     st.session_state.all_data = {}
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'fetched_data_details' not in st.session_state:
+    st.session_state.fetched_data_details = {}
 
 if st.sidebar.button("Fetch Selected Data"):
     st.session_state.all_data = {}  # Reset all_data
+    st.session_state.fetched_data_details = {}  # Reset fetched_data_details
 
     # Fetch commodity data
     for selected_commodity in selected_commodities:
@@ -130,6 +133,13 @@ if st.sidebar.button("Fetch Selected Data"):
                             file_name=f"{selected_commodity.lower().replace(' ', '_')}_data.csv",
                             mime="text/csv",
                         )
+                    
+                    # Store details and graph URLs
+                    st.session_state.fetched_data_details[selected_commodity] = {
+                        'details': details,
+                        'recent_graph_url': recent_graph_url,
+                        'historical_graph_url': historical_graph_url
+                    }
                 else:
                     st.error(f"No data found for {selected_commodity}. Please try again.")
 
@@ -152,6 +162,9 @@ if st.sidebar.button("Fetch Selected Data"):
                         file_name=f"{selected_indicator.lower().replace(' ', '_')}_data.csv",
                         mime="text/csv",
                     )
+                    
+                    # Store details
+                    st.session_state.fetched_data_details[selected_indicator] = {'details': details}
                 else:
                     st.warning("No data available.")
             else:
@@ -176,17 +189,32 @@ if st.sidebar.button("Fetch Selected Data"):
                         file_name=f"inflation_{selected_inflation.lower().replace(' ', '_')}_data.csv",
                         mime="text/csv",
                     )
+                    
+                    # Store details
+                    st.session_state.fetched_data_details[f"Inflation - {selected_inflation}"] = {'details': details}
                 else:
                     st.warning("No data available.")
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
-# Display fetched data
+# Display fetched data and details
 if st.session_state.all_data:
     st.subheader("Fetched Data")
     for key, df in st.session_state.all_data.items():
         st.write(f"{key}:")
         st.dataframe(df.round(2))
+        
+        if key in st.session_state.fetched_data_details:
+            details = st.session_state.fetched_data_details[key]
+            if 'details' in details:
+                for detail_key, detail_value in details['details'].items():
+                    st.write(f"{detail_key.capitalize()}: {detail_value}")
+            if 'recent_graph_url' in details and details['recent_graph_url']:
+                st.subheader("Recent Values")
+                st.image(details['recent_graph_url'], use_column_width=True)
+            if 'historical_graph_url' in details and details['historical_graph_url']:
+                st.subheader("Longer Historical Series")
+                st.image(details['historical_graph_url'], use_column_width=True)
 
 # Chat with AI about the data
 if st.session_state.all_data:
@@ -201,8 +229,8 @@ if st.session_state.all_data:
         with st.spinner("AI is analyzing the data..."):
             ai_response = chat_with_ai(data_description, user_question)
         if ai_response:
-            st.session_state.chat_history.append(("User", user_question))
-            st.session_state.chat_history.append(("AI", ai_response))
+            st.session_state.chat_history.insert(0, ("AI", ai_response))
+            st.session_state.chat_history.insert(0, ("User", user_question))
 
     # Display chat history
     st.subheader("Chat History")
