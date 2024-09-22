@@ -3,6 +3,8 @@ import pandas as pd
 from scraper import get_data, create_graph, REGIONS
 from openai import OpenAI
 import json
+from fpdf import FPDF
+import base64
 
 # Securely get the OpenAI API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -56,6 +58,67 @@ inflation_urls = {
     'MSCI Developed Markets': 'https://www.theglobaleconomy.com/rankings/Inflation/MSCI-Developed%20Markets/'
 }
 
+# Function to create a download link for a given file
+def get_binary_file_downloader_html(bin_file, file_label='File'):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    bin_str = base64.b64encode(data).decode()
+    href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{bin_file}">{file_label}</a>'
+    return href
+
+# Function to create PDF of fetched data
+def create_fetched_data_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    for key, df in st.session_state.all_data.items():
+        pdf.cell(200, 10, txt=f"{key}:", ln=True, align='L')
+        pdf.ln(5)
+        
+        # Convert dataframe to list of lists for easier iteration
+        data = [df.columns.tolist()] + df.values.tolist()
+        
+        # Determine column widths
+        col_widths = [max(len(str(item)) for item in col) * 2 for col in zip(*data)]
+        
+        for row in data:
+            for i, item in enumerate(row):
+                pdf.cell(col_widths[i], 10, str(item), border=1)
+            pdf.ln()
+        
+        pdf.ln(10)
+        
+        if key in st.session_state.fetched_data_details:
+            details = st.session_state.fetched_data_details[key]
+            if 'details' in details:
+                for detail_key, detail_value in details['details'].items():
+                    pdf.cell(200, 10, txt=f"{detail_key.capitalize()}: {detail_value}", ln=True, align='L')
+            pdf.ln(5)
+    
+    pdf.output("fetched_data.pdf")
+
+# Function to create PDF of AI chat
+def create_ai_chat_pdf():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    pdf.cell(200, 10, txt="AI Chat History", ln=True, align='C')
+    pdf.ln(10)
+    
+    for role, message in st.session_state.chat_history:
+        pdf.multi_cell(0, 10, txt=f"{role}: {message}", align='L')
+        pdf.ln(5)
+    
+    pdf.output("ai_chat.pdf")
+
+# Function to reset the app
+def reset_app():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.experimental_rerun()
+
 # Sidebar for data source selection
 st.sidebar.title("Select Data Sources")
 st.sidebar.info("Select the data sources you want to analyze, then click 'Fetch Selected Data'.")
@@ -71,6 +134,10 @@ selected_indicators = st.sidebar.multiselect("Select economic indicators", list(
 # Inflation data multiselect
 st.sidebar.subheader("Inflation Data")
 selected_inflations = st.sidebar.multiselect("Select regions for inflation data", list(inflation_urls.keys()))
+
+# Reset button
+if st.sidebar.button("Reset App"):
+    reset_app()
 
 # Function to chat with AI about the data
 def chat_with_ai(data_description, user_question):
@@ -216,6 +283,11 @@ if st.session_state.all_data:
                 st.subheader("Longer Historical Series")
                 st.image(details['historical_graph_url'], use_column_width=True)
 
+    # Button to create PDF of fetched data
+    if st.button("Create PDF of Fetched Data"):
+        create_fetched_data_pdf()
+        st.markdown(get_binary_file_downloader_html('fetched_data.pdf', 'Download Fetched Data PDF'), unsafe_allow_html=True)
+
 # Chat with AI about the data
 if st.session_state.all_data:
     st.subheader("Chat with AI about the Data")
@@ -237,15 +309,21 @@ if st.session_state.all_data:
     for role, message in st.session_state.chat_history:
         st.write(f"{role}: {message}")
 
-    # Download chat history
+    # Download chat history as JSON
     if st.session_state.chat_history:
         chat_history_str = json.dumps(st.session_state.chat_history, indent=2)
         st.download_button(
-            label="Download Chat History",
+            label="Download Chat History as JSON",
             data=chat_history_str,
             file_name="chat_history.json",
             mime="application/json"
         )
+
+    # Button to create PDF of AI chat
+    if st.button("Create PDF of AI Chat"):
+        create_ai_chat_pdf()
+        st.markdown(get_binary_file_downloader_html('ai_chat.pdf', 'Download AI Chat PDF'), unsafe_allow_html=True)
+
 else:
     st.info("Fetch some data first to chat with the AI about it.")
 
