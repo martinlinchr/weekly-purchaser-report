@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from scraper import get_data, create_graph, REGIONS
 from openai import OpenAI
+import json
 
 # Securely get the OpenAI API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -90,6 +91,8 @@ def chat_with_ai(data_description, user_question):
 # Initialize session state
 if 'all_data' not in st.session_state:
     st.session_state.all_data = {}
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
 
 if st.sidebar.button("Fetch Selected Data"):
     st.session_state.all_data = {}  # Reset all_data
@@ -178,16 +181,43 @@ if st.sidebar.button("Fetch Selected Data"):
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
+# Display fetched data
+if st.session_state.all_data:
+    st.subheader("Fetched Data")
+    for key, df in st.session_state.all_data.items():
+        st.write(f"{key}:")
+        st.dataframe(df.round(2))
+
 # Chat with AI about the data
 if st.session_state.all_data:
     st.subheader("Chat with AI about the Data")
-    user_question = st.text_input("Ask a question about the fetched data:")
-    if user_question:
-        data_description = "\n".join([f"{key}:\n{value.to_string()}\n" for key, value in st.session_state.all_data.items()])
+    
+    # Select specific data to chat about
+    data_to_chat = st.multiselect("Select data to chat about", list(st.session_state.all_data.keys()))
+    
+    user_question = st.text_input("Ask a question about the selected data:")
+    if user_question and data_to_chat:
+        data_description = "\n".join([f"{key}:\n{st.session_state.all_data[key].to_string()}\n" for key in data_to_chat])
         with st.spinner("AI is analyzing the data..."):
             ai_response = chat_with_ai(data_description, user_question)
         if ai_response:
-            st.write("AI Response:", ai_response)
+            st.session_state.chat_history.append(("User", user_question))
+            st.session_state.chat_history.append(("AI", ai_response))
+
+    # Display chat history
+    st.subheader("Chat History")
+    for role, message in st.session_state.chat_history:
+        st.write(f"{role}: {message}")
+
+    # Download chat history
+    if st.session_state.chat_history:
+        chat_history_str = json.dumps(st.session_state.chat_history, indent=2)
+        st.download_button(
+            label="Download Chat History",
+            data=chat_history_str,
+            file_name="chat_history.json",
+            mime="application/json"
+        )
 else:
     st.info("Fetch some data first to chat with the AI about it.")
 
