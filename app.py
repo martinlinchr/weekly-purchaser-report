@@ -5,6 +5,7 @@ from openai import OpenAI
 import json
 from fpdf import FPDF
 import base64
+import plotly
 
 # Securely get the OpenAI API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
