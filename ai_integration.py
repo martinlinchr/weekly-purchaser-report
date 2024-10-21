@@ -1,7 +1,8 @@
+import streamlit as st
 import os
 from openai import OpenAI
 
-client = OpenAI(api_key=os.environ.get("___"))
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def create_assistant():
     assistant = client.beta.assistants.create(
