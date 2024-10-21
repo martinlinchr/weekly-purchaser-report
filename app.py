@@ -150,7 +150,7 @@ def chat_with_ai(data_description, user_question):
     try:
         prompt = f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_question}\n\nAnswer:"
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are an AI assistant that analyzes economic data and answers questions about it."},
                 {"role": "user", "content": prompt}
