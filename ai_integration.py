@@ -2,6 +2,12 @@ import streamlit as st
 import os
 from openai import OpenAI
 
+# Check if the API key is available in secrets
+if "OPENAI_API_KEY" not in st.secrets:
+    st.error("OPENAI_API_KEY is not found in Streamlit Secrets. Please add it to your app's secrets.")
+    st.stop()
+
+# Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def create_assistant():
