@@ -1,9 +1,6 @@
 # Ignore .env file containing sensitive information
 .env
 
-# Ignore Streamlit secrets file
-.streamlit/secrets.toml
-
 # Python
 __pycache__/
 *.py[cod]
