@@ -273,6 +273,15 @@ if st.sidebar.button("Fetch Selected Data"):
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
+def get_image_base64(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        image_bytes = BytesIO(response.content)
+        return base64.b64encode(image_bytes.getvalue()).decode('utf-8')
+    else:
+        st.error(f"Failed to retrieve image from {url}")
+        return None
+
 # Display fetched data and details
 if st.session_state.all_data:
     st.subheader("Fetched Data")
