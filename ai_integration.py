@@ -26,6 +26,30 @@ except Exception as e:
 # Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+def analyze_image(client, image_url, question):
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-vision-preview",  # Use the correct model name
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": question},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_url,
+                            },
+                        },
+                    ],
+                }
+            ],
+            max_tokens=300,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"An error occurred while analyzing the image: {str(e)}"
+
 def create_assistant(client):
     assistant = client.beta.assistants.create(
         name="Procurement Assistant GPT (general)",
