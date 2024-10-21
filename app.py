@@ -6,6 +6,9 @@ import json
 from fpdf import FPDF
 import base64
 import plotly
+import requests
+from io import BytesIO
+from ai_integration import analyze_image, chat_with_assistant
 
 # Debug: Print a masked version of the API key
 api_key = st.secrets["OPENAI_API_KEY"]
@@ -13,7 +16,7 @@ st.write(f"API Key (first 5 chars): {api_key[:5]}...")
 st.write(f"API Key length: {len(api_key)}")
 
 # Initialize the OpenAI client with the API key from Streamlit secrets
-client = OpenAI(api_key=api_key)
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("Economic Data Analyzer")
 
