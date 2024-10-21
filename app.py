@@ -10,13 +10,13 @@ import requests
 from io import BytesIO
 from ai_integration import analyze_image, chat_with_assistant
 
+# Initialize the OpenAI client with the API key from Streamlit secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
 # Debug: Print a masked version of the API key
 api_key = st.secrets["OPENAI_API_KEY"]
 st.write(f"API Key (first 5 chars): {api_key[:5]}...")
 st.write(f"API Key length: {len(api_key)}")
-
-# Initialize the OpenAI client with the API key from Streamlit secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("Economic Data Analyzer")
 
@@ -273,6 +273,7 @@ if st.sidebar.button("Fetch Selected Data"):
             else:
                 st.error(f"No inflation data found for {selected_inflation}. Please try again.")
 
+# Function to get image as base64
 def get_image_base64(url):
     response = requests.get(url)
     if response.status_code == 200:
@@ -332,11 +333,28 @@ if st.session_state.all_data:
     # Select specific data to chat about
     data_to_chat = st.multiselect("Select data to chat about", list(st.session_state.all_data.keys()))
     
+    # Option to include graph in the analysis
+    include_graph = st.checkbox("Include graph in the analysis")
+    selected_graph = None
+    if include_graph:
+        graph_options = [f"{key} - Recent" for key in data_to_chat if 'recent_graph_url' in st.session_state.fetched_data_details.get(key, {})]
+        graph_options += [f"{key} - Historical" for key in data_to_chat if 'historical_graph_url' in st.session_state.fetched_data_details.get(key, {})]
+        selected_graph = st.selectbox("Select a graph to include", graph_options)
+    
     user_question = st.text_input("Ask a question about the selected data:")
     if user_question and data_to_chat:
         data_description = "\n".join([f"{key}:\n{st.session_state.all_data[key].to_string()}\n" for key in data_to_chat])
+        
+        image_data = None
+        if include_graph and selected_graph:
+            key, graph_type = selected_graph.rsplit(' - ', 1)
+            url_key = 'recent_graph_url' if graph_type == 'Recent' else 'historical_graph_url'
+            image_url = st.session_state.fetched_data_details[key][url_key]
+            image_data = f"data:image/jpeg;base64,{get_image_base64(image_url)}"
+        
         with st.spinner("AI is analyzing the data..."):
-            ai_response = chat_with_ai(data_description, user_question)
+            ai_response = chat_with_assistant(client, data_description, user_question, image_data)
+        
         if ai_response:
             st.session_state.chat_history.insert(0, ("AI", ai_response))
             st.session_state.chat_history.insert(0, ("User", user_question))
