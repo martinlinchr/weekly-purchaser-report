@@ -30,7 +30,7 @@ def create_assistant(client):
     assistant = client.beta.assistants.create(
         name="Procurement Assistant GPT (general)",
         instructions="",
-        model="gpt-4-turbo"
+        model="gpt-4o-mini"
     )
     return assistant
 
