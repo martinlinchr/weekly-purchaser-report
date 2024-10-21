@@ -7,6 +7,26 @@ if "OPENAI_API_KEY" not in st.secrets:
     st.error("OPENAI_API_KEY is not found in Streamlit Secrets. Please add it to your app's secrets.")
     st.stop()
 
+def get_openai_api_key():
+    # Try to get the API key from environment variables first
+    api_key = os.environ.get("OPENAI_API_KEY")
+    
+    # If not found in environment, try Streamlit secrets
+    if not api_key and "OPENAI_API_KEY" in st.secrets:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment variables or Streamlit secrets")
+    
+    return api_key
+
+try:
+    api_key = get_openai_api_key()
+    client = OpenAI(api_key=api_key)
+except Exception as e:
+    st.error(f"Error initializing OpenAI client: {str(e)}")
+    st.stop()
+
 # Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
