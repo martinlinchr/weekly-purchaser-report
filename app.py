@@ -302,8 +302,10 @@ if st.session_state.all_data:
                 if st.button(f"Analyze Recent Graph for {key}"):
                     question = "Describe the trends shown in this graph and provide any notable insights."
                     with st.spinner("Analyzing the graph..."):
-                        analysis = analyze_image(client, details['recent_graph_url'], question)
-                    st.write("Graph Analysis:", analysis)
+                        image_base64 = get_image_base64(details['recent_graph_url'])
+                        if image_base64:
+                            analysis = analyze_image(client, f"data:image/jpeg;base64,{image_base64}", question)
+                            st.write("Graph Analysis:", analysis)
             
             if 'historical_graph_url' in details and details['historical_graph_url']:
                 st.subheader("Longer Historical Series")
@@ -313,8 +315,10 @@ if st.session_state.all_data:
                 if st.button(f"Analyze Historical Graph for {key}"):
                     question = "Describe the long-term trends shown in this graph and provide any notable insights."
                     with st.spinner("Analyzing the graph..."):
-                        analysis = analyze_image(client, details['historical_graph_url'], question)
-                    st.write("Graph Analysis:", analysis)
+                        image_base64 = get_image_base64(details['historical_graph_url'])
+                        if image_base64:
+                            analysis = analyze_image(client, f"data:image/jpeg;base64,{image_base64}", question)
+                            st.write("Graph Analysis:", analysis)
 
     # Button to create PDF of fetched data
     if st.button("Create PDF of Fetched Data"):
