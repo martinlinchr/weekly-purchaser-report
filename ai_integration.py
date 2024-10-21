@@ -29,7 +29,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 def analyze_image(client, image_url, question):
     try:
         response = client.chat.completions.create(
-            model="gpt-4-vision-preview",  # Use the correct model name
+            model="gpt-4o-mini",  # Use the correct model name
             messages=[
                 {
                     "role": "user",
