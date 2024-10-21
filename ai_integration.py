@@ -8,15 +8,11 @@ if "OPENAI_API_KEY" not in st.secrets:
     st.stop()
 
 def get_openai_api_key():
-    # Try to get the API key from environment variables first
-    api_key = os.environ.get("OPENAI_API_KEY")
-    
-    # If not found in environment, try Streamlit secrets
-    if not api_key and "OPENAI_API_KEY" in st.secrets:
-        api_key = st.secrets["OPENAI_API_KEY"]
+    # Try to get the API key from Streamlit secrets
+    api_key = st.secrets.get("OPENAI_API_KEY")
     
     if not api_key:
-        raise ValueError("OPENAI_API_KEY not found in environment variables or Streamlit secrets")
+        raise ValueError("OPENAI_API_KEY not found in Streamlit secrets")
     
     return api_key
 
