@@ -10,6 +10,15 @@ import plotly
 # Securely get the OpenAI API key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# Debug section
+st.write("Debugging Secrets:")
+if "OPENAI_API_KEY" in st.secrets:
+    st.write("OPENAI_API_KEY is present in secrets.")
+    # Only show a part of the key for security
+    st.write(f"Key starts with: {st.secrets['OPENAI_API_KEY'][:5]}...")
+else:
+    st.write("OPENAI_API_KEY is NOT found in secrets.")
+
 st.title("Economic Data Analyzer")
 
 # Data source selection
