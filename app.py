@@ -285,9 +285,24 @@ if st.session_state.all_data:
             if 'recent_graph_url' in details and details['recent_graph_url']:
                 st.subheader("Recent Values")
                 st.image(details['recent_graph_url'], use_column_width=True)
+                
+                # Add image analysis option for recent graph
+                if st.button(f"Analyze Recent Graph for {key}"):
+                    question = "Describe the trends shown in this graph and provide any notable insights."
+                    with st.spinner("Analyzing the graph..."):
+                        analysis = analyze_image(client, details['recent_graph_url'], question)
+                    st.write("Graph Analysis:", analysis)
+            
             if 'historical_graph_url' in details and details['historical_graph_url']:
                 st.subheader("Longer Historical Series")
                 st.image(details['historical_graph_url'], use_column_width=True)
+                
+                # Add image analysis option for historical graph
+                if st.button(f"Analyze Historical Graph for {key}"):
+                    question = "Describe the long-term trends shown in this graph and provide any notable insights."
+                    with st.spinner("Analyzing the graph..."):
+                        analysis = analyze_image(client, details['historical_graph_url'], question)
+                    st.write("Graph Analysis:", analysis)
 
     # Button to create PDF of fetched data
     if st.button("Create PDF of Fetched Data"):
