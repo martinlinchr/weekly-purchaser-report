@@ -7,26 +7,14 @@ from fpdf import FPDF
 import base64
 import plotly
 
-# Securely get the OpenAI API key
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Load environment variables
+load_dotenv()
 
-st.write("Debugging Environment and Secrets:")
-
-# Check for environment variables
-st.write("Environment Variables:")
-openai_api_key_env = os.environ.get("OPENAI_API_KEY")
-st.write(f"OPENAI_API_KEY in env: {'Present' if openai_api_key_env else 'Not found'}")
-
-# Check Streamlit secrets
-st.write("Streamlit Secrets:")
-if "OPENAI_API_KEY" in st.secrets:
-    st.write("OPENAI_API_KEY is present in secrets.")
-    # Show part of the key for verification, but keep most of it hidden
-    api_key = st.secrets["OPENAI_API_KEY"]
-    st.write(f"Key format: {api_key[:4]}...{api_key[-4:]}")
-    st.write(f"Key length: {len(api_key)}")
-else:
-    st.write("OPENAI_API_KEY is NOT found in secrets.")
+# Initialize the OpenAI client with v2 beta header
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    default_headers={"OpenAI-Beta": "assistants=v2"}
+)
 
 st.title("Economic Data Analyzer")
 
