@@ -26,7 +26,7 @@ except Exception as e:
 # Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def create_assistant():
+def create_assistant(client):
     assistant = client.beta.assistants.create(
         name="Procurement Assistant GPT (general)",
         instructions="",
@@ -34,11 +34,11 @@ def create_assistant():
     )
     return assistant
 
-def create_thread():
+def create_thread(client):
     thread = client.beta.threads.create()
     return thread
 
-def add_message_to_thread(thread_id, content):
+def add_message_to_thread(client, thread_id, content):
     message = client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
@@ -46,23 +46,23 @@ def add_message_to_thread(thread_id, content):
     )
     return message
 
-def run_assistant(assistant_id, thread_id):
+def run_assistant(client, assistant_id, thread_id):
     run = client.beta.threads.runs.create(
         thread_id=thread_id,
         assistant_id=assistant_id
     )
     return run
 
-def get_assistant_response(thread_id):
+def get_assistant_response(client, thread_id):
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     return messages.data[0].content[0].text.value
 
-def chat_with_assistant(assistant_id, thread_id, user_input):
-    add_message_to_thread(thread_id, user_input)
-    run = run_assistant(assistant_id, thread_id)
+def chat_with_assistant(client, assistant_id, thread_id, user_input):
+    add_message_to_thread(client, thread_id, user_input)
+    run = run_assistant(client, assistant_id, thread_id)
     
     # Wait for the run to complete
     while run.status != "completed":
         run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
     
-    return get_assistant_response(thread_id)
+    return get_assistant_response(client, thread_id)
