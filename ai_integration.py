@@ -26,10 +26,13 @@ except Exception as e:
 # Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# Use a constant for the model name
+GPT_MODEL = "gpt-4o"
+
 def analyze_image(client, image_data, question):
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use the correct model name
+            model=GPT_MODEL,
             messages=[
                 {
                     "role": "user",
@@ -44,7 +47,7 @@ def analyze_image(client, image_data, question):
                     ],
                 }
             ],
-            max_tokens=300,
+            max_tokens=500,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -81,12 +84,26 @@ def get_assistant_response(client, thread_id):
     messages = client.beta.threads.messages.list(thread_id=thread_id)
     return messages.data[0].content[0].text.value
 
-def chat_with_assistant(client, assistant_id, thread_id, user_input):
-    add_message_to_thread(client, thread_id, user_input)
-    run = run_assistant(client, assistant_id, thread_id)
-    
-    # Wait for the run to complete
-    while run.status != "completed":
-        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-    
-    return get_assistant_response(client, thread_id)
+def chat_with_assistant(client, data_description, user_input, image_data=None):
+    try:
+        messages = [
+            {"role": "system", "content": "You are an AI assistant that analyzes economic data and answers questions about it."},
+            {"role": "user", "content": [{"type": "text", "text": f"Based on the following economic data:\n\n{data_description}\n\nUser question: {user_input}"}]}
+        ]
+        
+        if image_data:
+            messages[1]["content"].append({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_data,
+                }
+            })
+
+        response = client.chat.completions.create(
+            model=GPT_MODEL,
+            messages=messages,
+            max_tokens=500,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"An error occurred while communicating with the AI: {str(e)}"
