@@ -26,7 +26,7 @@ except Exception as e:
 # Initialize the OpenAI client with the API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def analyze_image(client, image_url, question):
+def analyze_image(client, image_data, question):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",  # Use the correct model name
@@ -38,7 +38,7 @@ def analyze_image(client, image_url, question):
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": image_url,
+                                "url": image_data,
                             },
                         },
                     ],
