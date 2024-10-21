@@ -7,14 +7,8 @@ from fpdf import FPDF
 import base64
 import plotly
 
-# Load environment variables
-load_dotenv()
-
-# Initialize the OpenAI client with v2 beta header
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
-    default_headers={"OpenAI-Beta": "assistants=v2"}
-)
+# Initialize the OpenAI client with the API key from Streamlit secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("Economic Data Analyzer")
 
