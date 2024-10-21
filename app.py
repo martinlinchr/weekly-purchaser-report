@@ -13,7 +13,7 @@ st.write(f"API Key (first 5 chars): {api_key[:5]}...")
 st.write(f"API Key length: {len(api_key)}")
 
 # Initialize the OpenAI client with the API key from Streamlit secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+client = OpenAI(api_key=api_key)
 
 st.title("Economic Data Analyzer")
 
