@@ -1,13 +1,13 @@
 import os
 from openai import OpenAI
 
-client = OpenAI(api_key=os.environ.get("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"))
+client = OpenAI(api_key=os.environ.get("___"))
 
 def create_assistant():
     assistant = client.beta.assistants.create(
         name="Procurement Assistant GPT (general)",
         instructions="",
-        model="gpt-4"
+        model="gpt-4-turbo"
     )
     return assistant
 
